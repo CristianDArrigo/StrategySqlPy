@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 import logging
+from dbinterface import DBInterface, SQLiteInterface
 
 """
 SQL Query Library
@@ -226,7 +227,6 @@ class SQLQuery:
         full_components.extend(self.components)
 
         query = self.strategy.build_query(full_components)
-        logger.info(f"Executing query: {query}")
         return query
 
 # Execution Strategy
@@ -242,7 +242,8 @@ class PrintExecutionStrategy(ExecutionStrategy):
     Simple execution strategy that prints the query.
     """
     def execute(self, query: SQLQuery):
-        logger.info(f"Query executed via PrintExecutionStrategy: {query.execute()}")
+        print(query.execute())
+        # logger.info(f"Query executed via PrintExecutionStrategy: {query.execute()}")
 
 class MockExecutionStrategy(ExecutionStrategy):
     """
@@ -250,8 +251,24 @@ class MockExecutionStrategy(ExecutionStrategy):
     """
     def execute(self, query: SQLQuery):
         query_string = query.execute()
-        logger.info(f"Simulating execution of: {query_string}")
         return {"status": "success", "query": query_string}
+    
+
+class DBExecutionStrategy(ExecutionStrategy):
+    def __init__(self, db_interface: DBInterface):
+        self.db_interface = db_interface
+
+    def execute(self, query: SQLQuery):
+        self.db_interface.connect()
+        try:
+            query_string = query.execute()
+            print(f"Executing query: {query_string}")
+            results = self.db_interface.execute_query(query_string)
+            print(f"Results: {results}")
+            return results
+        finally:
+            self.db_interface.disconnect()
+
 
 # Builder Pattern
 class QueryBuilder:
@@ -311,11 +328,10 @@ if __name__ == "__main__":
 
     print_strategy = PrintExecutionStrategy()
     mock_strategy = MockExecutionStrategy()
+    db_strategy = DBExecutionStrategy(SQLiteInterface("example.db"))  # Let's suppose we have a SQLite database
 
-    print("Executing query with PrintExecutionStrategy:")
     print_strategy.execute(query)
 
-    print("\nExecuting query with MockExecutionStrategy:")
     result = mock_strategy.execute(query)
     print(result)
 
@@ -324,14 +340,11 @@ if __name__ == "__main__":
     update_query.add_component(Update(table="users"))
     update_query.add_component(Set(updates=["name = 'John'", "age = 25"]))
     update_query.add_component(Where(condition="id = 1"))
-    print("\nExecuting UPDATE query with PrintExecutionStrategy:")
     print_strategy.execute(update_query)
 
     # Delete query example
-    delete_query = QueryBuilder(strategy)
-    delete_query = (
-        builder
-        .delete("users")
-        .where("age < 18")
-        .build()
-    )
+    delete_query = SQLQuery(strategy)
+    delete_query.add_component(Delete(table="users"))
+    delete_query.add_component(Where(condition="age < 18"))
+    
+    db_strategy.execute(delete_query)  # Execute the delete query using the DBExecutionStrategy
