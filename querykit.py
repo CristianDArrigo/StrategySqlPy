@@ -258,16 +258,9 @@ class DBExecutionStrategy(ExecutionStrategy):
     def __init__(self, db_interface: DBInterface):
         self.db_interface = db_interface
 
-    def execute(self, query: SQLQuery):
-        self.db_interface.connect()
-        try:
-            query_string = query.execute()
-            print(f"Executing query: {query_string}")
-            results = self.db_interface.execute_query(query_string)
-            print(f"Results: {results}")
-            return results
-        finally:
-            self.db_interface.disconnect()
+    def execute(self, query: SQLQuery, params: tuple = ()):
+        query_string = query.execute()
+        return self.db_interface.execute_query(query_string, params)
 
 
 # Builder Pattern
@@ -319,7 +312,7 @@ if __name__ == "__main__":
         builder
         .select(["id", "name", "age"])
         .from_table("users")
-        .where("age > 30")
+        .where("age > ?")
         .join("addresses", "users.id = addresses.user_id")
         .group_by(["age"])
         .order_by(["name"], "DESC")
@@ -330,7 +323,7 @@ if __name__ == "__main__":
     mock_strategy = MockExecutionStrategy()
     db_strategy = DBExecutionStrategy(SQLiteInterface("example.db"))  # Let's suppose we have a SQLite database
 
-    print_strategy.execute(query)
+    db_strategy.execute(query, params=(18,))
 
     result = mock_strategy.execute(query)
     print(result)

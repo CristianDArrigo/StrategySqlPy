@@ -2,6 +2,24 @@ from abc import ABC, abstractmethod
 import sqlite3  # Example of a database module that can be used with this interface
 
 
+def cursor_manager(func):
+        def wrapper(self, query: str, params: tuple = ()):
+            cursor = None
+            try:
+                cursor = self.connection.cursor()  # Crea il cursore
+                result = func(self, cursor, query, params)  # Esegue la funzione originale
+                self.connection.commit()  # Effettua il commit per operazioni non-SELECT
+                return result
+            except Exception as e:
+                if self.connection:
+                    self.connection.rollback()  # Rollback in caso di errore
+                raise RuntimeError(f"Error executing query: {e}")
+            finally:
+                if cursor:
+                    cursor.close()  # Chiude sempre il cursore
+        return wrapper
+
+
 class DBInterface(ABC):
     @abstractmethod
     def connect(self):
@@ -9,7 +27,8 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def execute_query(self, query: str):
+    @cursor_manager
+    def execute_query(self, query: str, params: tuple = ()):
         """Execute a query on the database."""
         pass
 
@@ -28,16 +47,12 @@ class SQLiteInterface(DBInterface):
         self.connection = sqlite3.connect(self.db_path)
         print("Connected to SQLite database.")
 
-    def execute_query(self, query: str):
-        cursor = self.connection.cursor()
-        try:
-            cursor.execute(query)
-            results = cursor.fetchall()
-            self.connection.commit()
-            return results
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            raise
+    
+    @cursor_manager
+    def execute_query(self, query: str, params: tuple = ()):
+        cursor.execute(query, params)
+        if query.upper().startswith("SELECT"):
+            return cursor.fetchall()
 
     def disconnect(self):
         if self.connection:
