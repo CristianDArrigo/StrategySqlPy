@@ -72,10 +72,10 @@ print(result)
 ### **3. Update Query Example**
 
 ```python
-update_query = QueryBuilder(strategy)
-update_query.query.add_component(Update(table="users"))
-update_query.query.add_component(Set(updates=["name = 'John'", "age = 25"]))
-update_query.query.add_component(Where(condition="id = 1"))
+update_query = SQLQuery(strategy)
+update_query.add_component(Update(table="users"))
+update_query.add_component(Set(updates=["name = 'John'", "age = 25"]))
+update_query.add_component(Where(condition="id = 1"))
 
 execution_strategy.execute(update_query.query)
 ```
