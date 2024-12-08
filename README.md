@@ -25,11 +25,11 @@ Queries are validated before execution to ensure logical consistency, such as ve
 
 ## Installation
 
-Simply clone the repository and include the `sql_query_library.py` in your project.
+Simply clone the repository and include the `querykit.py` in your project.
 
 ```bash
-git clone https://github.com/your-username/sql-query-library.git
-cd sql-query-library
+git clone https://github.com/CristianDArrigo/StrategySqlPy.git
+cd StrategySqlPy
 ```
 
 ---
@@ -39,7 +39,7 @@ cd sql-query-library
 ### **1. Building Queries with the Builder Pattern**
 
 ```python
-from sql_query_library import QueryBuilder, SimpleQueryStrategy, PrintExecutionStrategy
+from querykit import QueryBuilder, SimpleQueryStrategy, PrintExecutionStrategy
 
 strategy = SimpleQueryStrategy()
 builder = QueryBuilder(strategy)
@@ -62,7 +62,7 @@ execution_strategy.execute(query)
 ### **2. Mock Query Execution**
 
 ```python
-from sql_query_library import MockExecutionStrategy
+from querykit import MockExecutionStrategy
 
 mock_strategy = MockExecutionStrategy()
 result = mock_strategy.execute(query)
