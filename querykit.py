@@ -343,8 +343,12 @@ if __name__ == "__main__":
     print_strategy.execute(update_query)
 
     # Delete query example
-    delete_query = SQLQuery(strategy)
-    delete_query.add_component(Delete(table="users"))
-    delete_query.add_component(Where(condition="age < 18"))
+    delete_query = QueryBuilder(strategy)
+    delete_query = (
+        delete_query
+        .delete("users")
+        .where("age < 18")
+        .build()
+    )
     
-    db_strategy.execute(delete_query)  # Execute the delete query using the DBExecutionStrategy
+    print_strategy.execute(delete_query)  # Execute the delete query using the DBExecutionStrategy
