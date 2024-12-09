@@ -52,6 +52,11 @@ class SQLQuery:
         if any(isinstance(c, Delete) for c in self.components) and self.from_component:
             raise ValueError("DELETE query should not have a FROM clause explicitly.")
 
+        # Ensure subqueries are properly validated
+        for component in self.components:
+            if isinstance(component, Subquery):
+                component.query.validate()
+
     def parse(self) -> str:
         """
         Build and return the SQL query string.
@@ -67,3 +72,24 @@ class SQLQuery:
 
         query = self.strategy.build_query(full_components)
         return query
+
+
+class Subquery(SQLQueryComponent):
+    """
+    Represents a subquery that can be used in various SQL clauses.
+    """
+
+    def __init__(self, query: SQLQuery):
+        """
+        Initializes a Subquery with an SQLQuery instance.
+
+        Parameters:
+        query (SQLQuery): The subquery to embed.
+        """
+        self.query = query
+
+    def to_sql(self) -> str:
+        """
+        Converts the subquery to a string representation wrapped in parentheses.
+        """
+        return f"({self.query.parse()})"

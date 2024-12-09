@@ -1,25 +1,18 @@
-# example where we connect to a MySQL database and execute a query
-
-from querykit.core.db_interface import MySQLInterface
-from querykit.core.execution_strategy import DBExecutionStrategy
+from querykit.core.execution_strategy import PrintExecutionStrategy
 from querykit.core.query_builder import QueryBuilder
 from querykit.core.query_strategy import StandardQueryStrategy
 
-# Connect to MySQL database
-db_interface = MySQLInterface(
-    host="localhost", user="user", password="password", db="database"
-)
-db_interface.connect()
+# Subquery Builder: SELECT * FROM users WHERE age > 30
+subquery_strategy = StandardQueryStrategy()
+subquery_builder = QueryBuilder(subquery_strategy)
+subquery = subquery_builder.select(["*"]).from_table("users").where("age > 30").build()
+print(subquery.parse())
 
-# Create a query builder with a strategy
-query_builder = QueryBuilder(strategy=StandardQueryStrategy())
+# Main Query Builder: SELECT name, age FROM (SELECT * FROM users WHERE age > 30) AS sub_alias
+main_strategy = StandardQueryStrategy()
+main_builder = QueryBuilder(main_strategy)
+query = main_builder.select(["name", "age"]).from_with_subquery(subquery, "sub_alias").build()
 
-# Build a query
-query = query_builder.select(["*"]).from_table("users").where("id = %s").build()
-
-# Execute the query
-execution_strategy = DBExecutionStrategy(db_interface)
-result = execution_strategy.execute(query, params=(1,))
-
-# Print the result
-print(result)
+# Execute with PrintExecutionStrategy
+execution_strategy = PrintExecutionStrategy()
+execution_strategy.execute(query)

@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 
+
 class SQLQueryComponent:
     """
     Abstract base class for query components.
@@ -17,10 +18,12 @@ class Select(SQLQueryComponent):
     Represents the SELECT clause of a SQL query.
     """
 
-    def __init__(self, columns: List[str]):
+    def __init__(self, columns: List[str] | SQLQueryComponent):
         self.columns = columns
 
     def to_sql(self) -> str:
+        if isinstance(self.columns, SQLQueryComponent):
+            return f"SELECT {self.columns.to_sql()}"
         return f"SELECT {', '.join(self.columns)}"
 
 
@@ -29,10 +32,12 @@ class From(SQLQueryComponent):
     Represents the FROM clause of a SQL query.
     """
 
-    def __init__(self, table: str):
+    def __init__(self, table: str | SQLQueryComponent):
         self.table = table
 
     def to_sql(self) -> str:
+        if isinstance(self.table, SQLQueryComponent):
+            return f"FROM {self.table.to_sql()}"
         return f"FROM {self.table}"
 
 
@@ -41,10 +46,12 @@ class Where(SQLQueryComponent):
     Represents the WHERE clause of a SQL query.
     """
 
-    def __init__(self, condition: str):
+    def __init__(self, condition: str | SQLQueryComponent):
         self.condition = condition
 
     def to_sql(self) -> str:
+        if isinstance(self.condition, SQLQueryComponent):
+            return f"WHERE {self.condition.to_sql()}"
         return f"WHERE {self.condition}"
 
 
