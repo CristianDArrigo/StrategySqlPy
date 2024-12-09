@@ -1,139 +1,209 @@
-# SQL Query Library
+# QueryKit
 
-A flexible and extensible Python library for building SQL queries programmatically. This library utilizes modern software design patterns to ensure modularity, maintainability, and ease of use. It is database-agnostic, focusing purely on query generation while leaving execution up to user-defined strategies.
+QueryKit is a flexible and extensible Python library for programmatically building and executing SQL queries. Designed with modern software engineering practices, QueryKit leverages design patterns like the Builder Pattern, Strategy Pattern, and interfaces to offer a modular, maintainable, and database-agnostic solution for query generation and execution.
+
+---
 
 ## Features
 
 ### 1. **Component-Based Query Construction**
-The library provides abstractions for SQL components such as `SELECT`, `WHERE`, `ORDER BY`, `INSERT`, and more. Each component is represented as a class that converts its attributes into SQL syntax.
+QueryKit allows you to build SQL queries using modular components, such as:
+- `SELECT`, `FROM`, `WHERE`
+- `JOIN`, `GROUP BY`, `ORDER BY`
+- `INSERT`, `UPDATE`, `DELETE`
+- `LIMIT`
 
-### 2. **Strategy Pattern for Query Construction**
-The library uses the [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern) to define different methods for assembling query components. For example, the `SimpleQueryStrategy` concatenates components linearly, ensuring a clean and structured query output.
+Each component encapsulates its own logic and is responsible for converting itself into SQL syntax.
 
-### 3. **Builder Pattern for Fluent Query Creation**
-The [Builder Pattern](https://en.wikipedia.org/wiki/Builder_pattern) is implemented to provide a fluent interface for query creation. This enables users to chain method calls to define queries in an intuitive and readable manner.
+### 2. **Builder Pattern for Fluent Query Creation**
+The Builder Pattern simplifies query creation with a readable and intuitive API:
+```python
+query = (
+    QueryBuilder(StandardQueryStrategy())
+    .select(["id", "name", "email"])
+    .from_table("users")
+    .where("age > 18")
+    .order_by(["name"], "ASC")
+    .build()
+)
+```
 
-### 4. **Execution Strategies**
-The library introduces an `ExecutionStrategy` base class to allow custom execution logic for queries. Examples include:
-- `PrintExecutionStrategy` for printing queries.
-- `MockExecutionStrategy` for simulating query execution.
+### 3. **Strategy Pattern for Query Assembly**
+The library uses the [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern) to define customizable methods for assembling query components. 
+
+- `StandardQueryStrategy`: A default implementation that concatenates components linearly.
+
+### 4. **Database-Agnostic Execution**
+QueryKit includes interfaces (`DBInterface`) for interacting with multiple database systems. Supported databases include:
+- SQLite
+- MySQL
 
 ### 5. **Validation Mechanism**
-Queries are validated before execution to ensure logical consistency, such as verifying that a `SELECT` query includes a `FROM` clause or that an `UPDATE` query includes a `SET` clause.
+Queries are validated before execution to ensure logical consistency, such as:
+- `SELECT` queries must include a `FROM` clause.
+- `UPDATE` queries require a `SET` clause.
+- `DELETE` queries should not include an explicit `FROM` clause.
+
+### 6. **Extensibility**
+Users can:
+- Add custom SQL components.
+- Define new query strategies.
+- Implement custom database interfaces by extending `DBInterface`.
 
 ---
 
 ## Installation
 
-Simply clone the repository and include the `querykit.py` in your project.
-
+Clone the repository and install the dependencies:
 ```bash
 git clone https://github.com/CristianDArrigo/StrategySqlPy.git
 cd StrategySqlPy
+pip install -r requirements.txt
 ```
 
 ---
 
 ## Usage
 
-### **1. Building Queries with the Builder Pattern**
+### **1. Basic Query Building and Execution**
 
+#### Building a SELECT Query:
 ```python
-from querykit import QueryBuilder, SimpleQueryStrategy, PrintExecutionStrategy
+from querykit.core.query_builder import QueryBuilder
+from querykit.core.query_strategy import StandardQueryStrategy
+from querykit.core.db_interface import SQLiteInterface
+from querykit.core.execution_strategy import DBExecutionStrategy
 
-strategy = SimpleQueryStrategy()
-builder = QueryBuilder(strategy)
+# Configure the database
+db_interface = SQLiteInterface("example.db")
+db_interface.connect()
+execution_strategy = DBExecutionStrategy(db_interface)
 
+# Build a SELECT query
 query = (
-    builder
-    .select(["id", "name", "age"])
+    QueryBuilder(StandardQueryStrategy())
+    .select(["id", "name", "email"])
     .from_table("users")
-    .where("age > 30")
-    .join("addresses", "users.id = addresses.user_id")
-    .group_by(["age"])
-    .order_by(["name"], "DESC")
+    .where("age > 18")
+    .order_by(["name"], "ASC")
     .build()
 )
 
-execution_strategy = PrintExecutionStrategy()
-execution_strategy.execute(query)
+# Execute the query
+results = execution_strategy.execute(query)
+print(results)
+
+db_interface.disconnect()
 ```
 
-### **2. Mock Query Execution**
+#### Output:
+If the `users` table contains:
+| id | name      | email              | age |
+|----|-----------|--------------------|-----|
+| 1  | Alice     | alice@example.com  | 25  |
+| 2  | Bob       | bob@example.com    | 20  |
+| 3  | Charlie   | charlie@example.com| 17  |
 
+The output will be:
+```
+[(1, 'Alice', 'alice@example.com'), (2, 'Bob', 'bob@example.com')]
+```
+
+### **2. Custom Database Interface**
+
+#### Example: MySQL Interface
 ```python
-from querykit import MockExecutionStrategy
+from querykit.core.db_interface import MySQLInterface
+from querykit.core.execution_strategy import DBExecutionStrategy
+from querykit.core.query_builder import QueryBuilder
+from querykit.core.query_strategy import StandardQueryStrategy
 
-mock_strategy = MockExecutionStrategy()
-result = mock_strategy.execute(query)
-print(result)
-```
+# Configure the MySQL database
+mysql_interface = MySQLInterface(host="localhost", user="root", password="root", db="example_db", verbose=True)
+mysql_interface.connect()
+execution_strategy = DBExecutionStrategy(mysql_interface)
 
-### **3. Update Query Example**
+# Build a query
+query = (
+    QueryBuilder(StandardQueryStrategy())
+    .select(["id", "name"])
+    .from_table("users")
+    .where("age < 30")
+    .build()
+)
 
-```python
-update_query = SQLQuery(strategy)
-update_query.add_component(Update(table="users"))
-update_query.add_component(Set(updates=["name = 'John'", "age = 25"]))
-update_query.add_component(Where(condition="id = 1"))
+# Execute the query
+results = execution_strategy.execute(query)
+print(results)
 
-execution_strategy.execute(update_query.query)
-```
-
----
-
-## Design Patterns in Use
-
-### 1. **Strategy Pattern**
-- Defines how query components are assembled.
-- `SimpleQueryStrategy`: A straightforward concatenation of components.
-
-Read more about the Strategy Pattern on [Wikipedia](https://en.wikipedia.org/wiki/Strategy_pattern).
-
-### 2. **Builder Pattern**
-- Provides a fluent interface for building queries.
-- Eliminates the need to manually create and manage query components.
-
-Learn more about the Builder Pattern on [Wikipedia](https://en.wikipedia.org/wiki/Builder_pattern).
-
-### 3. **Execution Strategy**
-- Introduces a standardized way to execute or simulate SQL queries.
-- Easily extendable to support database connections or other execution behaviors.
-
-### 4. **Validation**
-- Ensures the logical structure of queries before execution, reducing runtime errors.
-
----
-
-## Advantages
-
-1. **Database-Agnostic**: Generates SQL strings that can be executed on any relational database.
-2. **Extensible**: Easily add new SQL components or strategies.
-3. **Fluent Interface**: The Builder Pattern ensures clean and readable query definitions.
-4. **Custom Execution**: User-defined execution strategies allow flexibility in running or testing queries.
-
----
-
-## Example Output
-
-### **SELECT Query**
-```sql
-SELECT id, name, age FROM users JOIN addresses ON users.id = addresses.user_id WHERE age > 30 GROUP BY age ORDER BY name DESC
-```
-
-### **UPDATE Query**
-```sql
-UPDATE users SET name = 'John', age = 25 WHERE id = 1
+mysql_interface.disconnect()
 ```
 
 ---
 
-## Contributions
+## Architecture Overview
 
-Contributions are welcome! Feel free to open issues or submit pull requests to improve functionality, add features, or fix bugs.
+### **Key Components**
+
+#### 1. **SQLQuery**
+- Represents the context for a SQL query.
+- Manages components and validates logical consistency.
+
+#### 2. **Query Components**
+- Encapsulate SQL clauses like `SELECT`, `WHERE`, `ORDER BY`, etc.
+- Located in `querykit/core/query_components.py`.
+
+#### 3. **Query Strategies**
+- Define how query components are assembled.
+- Located in `querykit/core/query_strategy.py`.
+
+#### 4. **Execution Strategies**
+- Handle query execution logic.
+- Includes `PrintExecutionStrategy` (for debugging) and `DBExecutionStrategy` (for real databases).
+
+#### 5. **Database Interfaces**
+- Provide a standardized interface for interacting with different databases.
+- Includes `SQLiteInterface` and `MySQLInterface`.
+
+---
+
+## Contribution
+
+Contributions are welcome! Feel free to open issues or submit pull requests to:
+- Add support for new databases.
+- Extend the validation logic.
+- Introduce advanced SQL features.
+
+### Development Setup
+```bash
+# Clone the repository
+git https://github.com/CristianDArrigo/StrategySqlPy.git
+cd StrategySqlPy
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest
+```
 
 ---
 
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
+
+## Roadmap
+
+1. Add support for PostgreSQL and other databases.
+2. Enhance validation for more complex queries.
+3. Introduce advanced features like subqueries and transactions.
+4. Implement a CLI tool for generating and executing queries.
+
+---
+
+## Contact
+
+For questions or feedback, feel free to reach out at [cristiandarrigo0@gmail.com].
